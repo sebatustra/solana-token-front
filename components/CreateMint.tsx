@@ -7,6 +7,7 @@ import {
   TOKEN_PROGRAM_ID,
   getMinimumBalanceForRentExemptMint,
   createInitializeMintInstruction,
+  getMint
 } from "@solana/spl-token";
 
 export const CreateMintForm: FC = () => {
@@ -27,7 +28,33 @@ export const CreateMintForm: FC = () => {
       return;
     }
 
-    // BUILD AND SEND CREATE MINT TRANSACTION HERE
+    const mint = web3.Keypair.generate();
+
+    const lamports = await getMinimumBalanceForRentExemptMint(connection);
+    const transaction = new web3.Transaction().add(
+      web3.SystemProgram.createAccount({
+        fromPubkey: publicKey,
+        newAccountPubkey: mint.publicKey,
+        space: MINT_SIZE,
+        lamports,
+        programId: TOKEN_PROGRAM_ID
+      }),
+      createInitializeMintInstruction(
+        mint.publicKey,
+        2,
+        publicKey,
+        publicKey,
+        TOKEN_PROGRAM_ID
+      )
+    );
+
+    sendTransaction(transaction, connection, {
+      signers: [mint]
+    }).then((res) => {
+      setTxSig(res);
+      setMint(mint.publicKey.toString())
+    })
+
   };
 
   return (

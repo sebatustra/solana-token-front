@@ -14,6 +14,8 @@ import {
 export const CreateTokenAccountForm: FC = () => {
   const [txSig, setTxSig] = useState("");
   const [tokenAccount, setTokenAccount] = useState("");
+  const [tokenMint, setTokenMint] = useState("");
+  const [ownerKey, setOwnerKey] = useState("");
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
   const link = () => {
@@ -27,8 +29,26 @@ export const CreateTokenAccountForm: FC = () => {
     if (!connection || !publicKey) {
       return;
     }
-    
-    // BUILD AND SEND CREATE TOKEN ACCOUNT TRANSACTION HERE
+
+    const mint = new web3.PublicKey(tokenMint);
+    const owner = new web3.PublicKey(ownerKey);
+
+    const associatedTokenAddress = await getAssociatedTokenAddress(mint, owner, false);
+
+    const transaction = new web3.Transaction().add(
+      createAssociatedTokenAccountInstruction(
+        publicKey,
+        associatedTokenAddress,
+        owner,
+        mint
+      )
+    )
+
+    sendTransaction(transaction, connection).then((res) => {
+      setTxSig(res);
+      setTokenAccount(associatedTokenAddress.toString());
+    });
+
   };
 
   return (
@@ -43,6 +63,7 @@ export const CreateTokenAccountForm: FC = () => {
             className={styles.formField}
             placeholder="Enter Token Mint"
             required
+            onChange={(e) => setTokenMint(e.target.value)}
           />
           <label htmlFor="owner">Token Account Owner:</label>
           <input
@@ -50,6 +71,7 @@ export const CreateTokenAccountForm: FC = () => {
             type="text"
             className={styles.formField}
             placeholder="Enter Token Account Owner PublicKey"
+            onChange={(e) => setOwnerKey(e.target.value)}
             required
           />
           <button type="submit" className={styles.formButton}>
